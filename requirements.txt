@@ -1,35 +1,6 @@
-# DevRel AI Backend — Python Dependencies
-
-# Web framework
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-pydantic==2.8.2
+fastapi==0.109.0
+uvicorn==0.27.0
+anthropic==0.18.1
+httpx==0.26.0
+pydantic==2.6.0
 python-multipart==0.0.9
-
-# Database
-asyncpg==0.29.0
-sqlalchemy[asyncio]==2.0.35
-
-# AI / LLM
-anthropic==0.34.2
-openai==1.45.0
-
-# Vector store
-qdrant-client==1.11.0
-
-# Web crawling & scraping
-crawl4ai==0.3.74          # async docs crawler
-httpx==0.27.2
-beautifulsoup4==4.12.3
-
-# Discord bot
-discord.py==2.4.0
-
-# Task queue
-celery==5.4.0
-redis==5.1.1
-
-# Utilities
-python-dotenv==1.0.1
-tenacity==9.0.0           # retry logic
-structlog==24.4.0
