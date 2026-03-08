@@ -2,3 +2,5 @@ fastapi
 uvicorn
 anthropic
 httpx
+discord.py
+aiohttp
