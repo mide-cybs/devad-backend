@@ -112,6 +112,49 @@ async def health():
     return {"status": "ok", "ts": datetime.utcnow().isoformat()}
 
 
+@app.get("/debug")
+async def debug():
+    """Check env vars and Supabase connectivity."""
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    service_key  = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    anon_key     = os.environ.get("SUPABASE_ANON_KEY", "")
+    active_key   = service_key or anon_key
+    result = {
+        "SUPABASE_URL_set": bool(supabase_url),
+        "SUPABASE_SERVICE_KEY_set": bool(service_key),
+        "SUPABASE_ANON_KEY_set": bool(anon_key),
+        "ANTHROPIC_API_KEY_set": bool(os.environ.get("ANTHROPIC_API_KEY")),
+        "DEFAULT_ORG_ID": os.environ.get("DEFAULT_ORG_ID", "NOT SET"),
+        "DISCORD_SERVER_ID": os.environ.get("DISCORD_SERVER_ID", "NOT SET"),
+    }
+    if not supabase_url or not active_key:
+        result["supabase_test"] = "SKIPPED - missing URL or key"
+        return result
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                f"{supabase_url.rstrip(chr(47))}/rest/v1/questions?limit=3",
+                headers={"apikey": active_key, "Authorization": f"Bearer {active_key}"},
+                timeout=8,
+            )
+            result["questions_table_status"] = r.status_code
+            result["questions_sample"] = r.text[:400]
+    except Exception as e:
+        result["questions_error"] = str(e)
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                f"{supabase_url.rstrip(chr(47))}/rest/v1/organizations?limit=3",
+                headers={"apikey": active_key, "Authorization": f"Bearer {active_key}"},
+                timeout=8,
+            )
+            result["orgs_table_status"] = r.status_code
+            result["orgs_sample"] = r.text[:400]
+    except Exception as e:
+        result["orgs_error"] = str(e)
+    return result
+
+
 # ── ORGS — multi-tenant core ───────────────────────────────────────────────────
 
 class CreateOrgRequest(BaseModel):
@@ -274,6 +317,16 @@ async def list_questions(org_id: str, limit: int = 50):
         f"org_id=eq.{org_id}&order=created_at.desc&limit={limit}"
     )
     return rows
+
+@app.get("/questions/{org_id}/{question_id}/response")
+async def get_question_response(org_id: str, question_id: str):
+    rows = await db_get(
+        "agent_responses",
+        f"question_id=eq.{question_id}&org_id=eq.{org_id}&limit=1"
+    )
+    if not rows:
+        return {"answer": None, "confidence_score": None, "action_taken": None}
+    return rows[0]
 
 
 # ── KNOWLEDGE BASE ─────────────────────────────────────────────────────────────
